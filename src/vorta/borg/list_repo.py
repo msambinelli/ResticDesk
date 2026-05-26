@@ -1,8 +1,6 @@
 from datetime import datetime as dt
 
 from vorta.store.models import ArchiveModel, RepoModel
-from vorta.utils import borg_compat
-
 from .borg_job import BorgJob
 
 
@@ -24,11 +22,7 @@ class BorgListRepoJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        if borg_compat.check('V2'):
-            cmd = ['borg', 'repo-list', '--info', '--log-json', '--json', '-r']
-        else:
-            cmd = ['borg', 'list', '--info', '--log-json', '--json']
-        cmd.append(f'{profile.repo.url}')
+        cmd = ['restic', 'snapshots', '--json', '-r', f'{profile.repo.url}']
 
         ret['ok'] = True
         ret['cmd'] = cmd
@@ -37,10 +31,18 @@ class BorgListRepoJob(BorgJob):
 
     def process_result(self, result):
         if result['returncode'] == 0:
-            repo, created = RepoModel.get_or_create(url=result['cmd'][-1])
-            if not result['data']:
-                result['data'] = {}  # TODO: Workaround for tests. Can't read mock results 2x.
-            remote_archives = result['data'].get('archives', [])
+            repo_url = result['params']['repo_url']
+            repo, _ = RepoModel.get_or_create(url=repo_url)
+            remote_snapshots = result['data'] if isinstance(result['data'], list) else []
+            remote_archives = [
+                {
+                    'id': snap.get('short_id') or snap.get('id'),
+                    'name': (snap.get('tags') or [snap.get('short_id') or snap.get('id')])[0],
+                    'time': snap.get('time'),
+                }
+                for snap in remote_snapshots
+                if isinstance(snap, dict)
+            ]
 
             # Delete archives that don't exist on the remote side
             for archive in ArchiveModel.select().where(ArchiveModel.repo == repo.id):
@@ -48,7 +50,7 @@ class BorgListRepoJob(BorgJob):
                     archive.delete_instance()
 
             # Add remote archives we don't have locally.
-            for archive in result['data'].get('archives', []):
+            for archive in remote_archives:
                 new_archive, _ = ArchiveModel.get_or_create(
                     snapshot_id=archive['id'],
                     repo=repo.id,

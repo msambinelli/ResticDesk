@@ -211,7 +211,7 @@ def test_refresh_archive_info(qapp, qtbot, mocker, borg_json_output, archive_env
     qtbot.waitUntil(lambda: tab.mountErrors.text() == 'Refreshed archives.', **pytest._wait_defaults)
 
 
-def test_inline_archive_rename(qapp, qtbot, mocker, borg_json_output, archive_env):
+def test_inline_archive_rename_not_supported_with_restic(qapp, qtbot, archive_env):
     """
     Tests the functionality of in-line renaming an archive.
     """
@@ -219,9 +219,7 @@ def test_inline_archive_rename(qapp, qtbot, mocker, borg_json_output, archive_en
 
     tab.archiveTable.selectRow(0)
     new_archive_name = 'idf89d8f9d8fd98'
-    stdout, stderr = borg_json_output('rename')
-    popen_result = mocker.MagicMock(stdout=stdout, stderr=stderr, returncode=0)
-    mocker.patch.object(vorta.borg.borg_job, 'Popen', return_value=popen_result)
+    original_name = tab.archiveTable.model().index(0, 4).data()
 
     # Trigger inline editing programmatically (more reliable than double-click simulation)
     item = tab.archiveTable.item(0, 4)
@@ -234,9 +232,11 @@ def test_inline_archive_rename(qapp, qtbot, mocker, borg_json_output, archive_en
     editor.setText(new_archive_name)
     qtbot.keyClick(editor, QtCore.Qt.Key.Key_Return)
 
-    # Successful rename case
-    qtbot.waitUntil(lambda: tab.archiveTable.model().index(0, 4).data() == new_archive_name, **pytest._wait_defaults)
-    assert tab.archiveTable.model().index(0, 4).data() == new_archive_name
+    qtbot.waitUntil(
+        lambda: 'Renaming snapshots is not supported by Restic.' in tab.mountErrors.text(),
+        **pytest._wait_defaults,
+    )
+    assert tab.archiveTable.model().index(0, 4).data() == original_name
 
 
 def test_archiveitem_contextmenu(qapp, qtbot, archive_env):

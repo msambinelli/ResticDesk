@@ -1,5 +1,5 @@
 from vorta.store.models import RepoModel
-from vorta.utils import borg_compat, format_archive_name
+from vorta.utils import format_archive_name
 
 from .borg_job import BorgJob
 
@@ -30,7 +30,7 @@ class BorgPruneJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        cmd = ['borg', 'prune', '--list', '--info', '--log-json']
+        cmd = ['restic', 'forget', '--json', '--prune', '-r', profile.repo.url]
 
         pruning_opts = [
             '--keep-hourly',
@@ -48,21 +48,11 @@ class BorgPruneJob(BorgJob):
         if profile.prune_prefix:
             formatted_prune_prefix = format_archive_name(profile, profile.prune_prefix)
 
-            if borg_compat.check('V2'):
-                pruning_opts += ['-a', f"sh:{formatted_prune_prefix}*"]
-            elif borg_compat.check('V122'):
-                pruning_opts += ['-a', f"{formatted_prune_prefix}*"]
-            else:
-                pruning_opts += ['--prefix', formatted_prune_prefix]
+            pruning_opts += ['--tag', formatted_prune_prefix]
 
         if profile.prune_keep_within:
             pruning_opts += ['--keep-within', profile.prune_keep_within]
         cmd += pruning_opts
-        if borg_compat.check('V2'):
-            cmd.extend(["-r", profile.repo.url])
-        else:
-            cmd.append(f'{profile.repo.url}')
-
         ret['ok'] = True
         ret['cmd'] = cmd
 

@@ -5,7 +5,7 @@ from .borg_job import BorgJob
 
 class BorgVersionJob(BorgJob):
     """
-    Gets the path of the borg binary to be used and the borg version.
+    Gets the path of the restic binary to be used and the restic version.
 
     Used to display under 'Settings' and later for version-specific compatibility.
     """
@@ -18,10 +18,10 @@ class BorgVersionJob(BorgJob):
         ret = {'ok': False}
 
         if cls.prepare_bin() is None:
-            ret['message'] = trans_late('messages', 'Borg binary was not found.')
+            ret['message'] = trans_late('messages', 'Restic binary was not found.')
             return ret
 
-        ret['cmd'] = ['borg', '--version']
+        ret['cmd'] = ['restic', 'version']
         ret['profile_name'] = 'default'
         ret['ok'] = True
         return ret

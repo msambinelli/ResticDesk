@@ -46,7 +46,7 @@ class TrayMenu(QSystemTrayIcon):
         menu = self.contextMenu()
         menu.clear()
 
-        open_action = menu.addAction(self.tr('Vorta for Borg Backup'))
+        open_action = menu.addAction(self.tr('Vorta for Restic'))
         open_action.triggered.connect(self.app.open_main_window_action)
 
         menu.addSeparator()

@@ -1,5 +1,5 @@
 from vorta.store.models import ArchiveModel, RepoModel
-from vorta.utils import borg_compat
+from vorta.i18n import trans_late
 
 from .borg_job import BorgJob
 
@@ -20,17 +20,14 @@ class BorgRenameJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        cmd = ['borg', 'rename', '--info', '--log-json']
-        if borg_compat.check('V2'):
-            cmd.extend(["-r", profile.repo.url, old_archive_name, new_archive_name])
-        else:
-            cmd.extend([f'{profile.repo.url}::{old_archive_name}', new_archive_name])
-
         ret['old_archive_name'] = old_archive_name
         ret['new_archive_name'] = new_archive_name
         ret['repo_url'] = profile.repo.url
-        ret['ok'] = True
-        ret['cmd'] = cmd
+        ret['message'] = trans_late(
+            'messages',
+            'Renaming snapshots is not supported by Restic. Use tags for labeling snapshots.',
+        )
+        ret['ok'] = False
 
         return ret
 

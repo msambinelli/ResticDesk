@@ -16,10 +16,10 @@ def test_umount_matches_symlinked_mount_point(monkeypatch):
     user_facing = '/home/test/.mnt/archive'
     canonical = '/var/home/test/.mnt/archive'
 
-    DiskPartitions = namedtuple('DiskPartitions', ['device', 'mountpoint'])
+    DiskPartitions = namedtuple('DiskPartitions', ['device', 'mountpoint', 'fstype'])
 
     def fake_disk_partitions(**kwargs):
-        return [DiskPartitions('borgfs', canonical)]
+        return [DiskPartitions('resticfs', canonical, 'fuse')]
 
     def fake_realpath(p, *args, **kwargs):
         if p == user_facing:

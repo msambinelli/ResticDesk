@@ -1,8 +1,6 @@
 from typing import List
 
 from vorta.store.models import RepoModel
-from vorta.utils import borg_compat
-
 from .borg_job import BorgJob
 
 
@@ -35,13 +33,8 @@ class BorgDeleteJob(BorgJob):
         if len(archives) <= 0:
             return ret
 
-        cmd = ['borg', 'delete', '--info', '--log-json']
-        if borg_compat.check('V2'):
-            cmd = cmd + ["-r", profile.repo.url, '-a']
-            cmd.append(f"re:({'|'.join(archives)})")
-        else:
-            cmd.append(f'{profile.repo.url}::{archives[0]}')
-            cmd.extend(archives[1:])
+        cmd = ['restic', 'forget', '--json', '--prune', '-r', profile.repo.url]
+        cmd.extend(archives)
 
         ret['archives'] = archives
         ret['cmd'] = cmd

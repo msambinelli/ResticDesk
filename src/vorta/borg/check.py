@@ -43,11 +43,7 @@ class BorgCheckJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        cmd = ['borg', 'check', '--info', '--log-json', '--progress']
-        if borg_compat.check('V2'):
-            cmd = cmd + ["-r", profile.repo.url]
-        else:
-            cmd.append(f'{profile.repo.url}')
+        cmd = ['restic', 'check', '--json', '-r', profile.repo.url]
 
         ret['ok'] = True
         ret['cmd'] = cmd

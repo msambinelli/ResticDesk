@@ -29,7 +29,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Change the borg passphrase</string>
+      <string>Change repository passphrase</string>
      </property>
     </widget>
    </item>

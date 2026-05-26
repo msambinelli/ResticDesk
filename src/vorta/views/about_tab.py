@@ -50,7 +50,7 @@ class AboutTab(BaseTab, AboutTabBase, AboutTabUI):
         docs_template = self.docsLink.text()
         docs_sentence = format_richtext(
             escape(translate('Form', self.docs_text)),
-            link('https://borgbackup.readthedocs.io/en/master/index.html', click_here),
+            link('https://restic.readthedocs.io/en/stable/', click_here),
         )
         self.docsLink.setText(format_richtext(docs_template, docs_sentence))
 
@@ -65,6 +65,6 @@ class AboutTab(BaseTab, AboutTabBase, AboutTabUI):
         log_link = link(f"file://{config.LOG_DIR}", translate('Form', self.view_logs_text))
         self.logLink.setText(format_richtext(log_template, log_link))
 
-    def set_borg_details(self, version, path):
+    def set_restic_details(self, version, path):
         self.borgVersion.setText(version)
-        self.borgPath.setText(f"<center>Path to Borg: {path}</center>")
+        self.borgPath.setText(f"<center>Path to Restic: {path}</center>")

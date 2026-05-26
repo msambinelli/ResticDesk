@@ -10,34 +10,35 @@ from vorta import config
 from vorta.i18n import trans_late, translate
 from vorta.i18n.richtext import escape, format_richtext, link
 from vorta.store.models import ArchiveModel, RepoModel, SourceFileModel, WifiSettingModel
-from vorta.utils import borg_compat, format_archive_name, get_network_status_monitor
+from vorta.utils import format_archive_name, get_network_status_monitor
 
 from .borg_job import BorgJob
 
 
 class BorgCreateJob(BorgJob):
     def process_result(self, result):
-        if result['returncode'] in [0, 1] and 'archive' in result['data']:
+        events = result['data'] if isinstance(result['data'], list) else []
+        summary = next((e for e in reversed(events) if isinstance(e, dict) and e.get('message_type') == 'summary'), None)
+        if result['returncode'] in [0, 1] and summary:
+            snapshot_id = summary.get('snapshot_id', '')
+            archive_name = result['params'].get('archive_name', snapshot_id)
             new_archive, created = ArchiveModel.get_or_create(
-                snapshot_id=result['data']['archive']['id'],
+                snapshot_id=snapshot_id,
                 defaults={
-                    'name': result['data']['archive']['name'],
-                    # Convert to local time (for Borg 2.x UTC timestamps) before storing as naive datetime
-                    'time': dt.fromisoformat(result['data']['archive']['start']).astimezone().replace(tzinfo=None),
+                    'name': archive_name,
+                    'time': dt.now(),
                     'repo': result['params']['repo_id'],
-                    'duration': result['data']['archive']['duration'],
-                    'size': result['data']['archive']['stats'].get('deduplicated_size', 0),
+                    'duration': summary.get('total_duration', 0),
+                    'size': summary.get('bytes_processed', 0),
                     'trigger': result['params'].get('category', 'user'),
                 },
             )
             new_archive.save()
-            if created and 'cache' in result['data'] and 'stats' in result['data']['cache']:
-                stats = result['data']['cache']['stats']
+            if created:
                 repo = RepoModel.get(id=result['params']['repo_id'])
-                repo.total_size = stats['total_size']
-                # repo.unique_csize = stats['unique_csize']
-                repo.unique_size = stats['unique_size']
-                repo.total_unique_chunks = stats['total_unique_chunks']
+                repo.total_size = None
+                repo.unique_size = None
+                repo.total_unique_chunks = None
                 repo.save()
 
             if result['returncode'] == 1:
@@ -146,24 +147,10 @@ class BorgCreateJob(BorgJob):
             ret['message'] = trans_late('messages', 'Repo folder not mounted or moved.')
             return ret
 
-        if 'zstd' in profile.compression and not borg_compat.check('ZSTD'):
-            ret['message'] = trans_late(
-                'messages',
-                'Your current Borg version does not support ZStd compression.',
-            )
-            return ret
-
         cmd = [
-            'borg',
-            'create',
-            '--list',
-            '--progress',
-            '--info',
-            '--log-json',
+            'restic',
+            'backup',
             '--json',
-            '--filter=AM',
-            '-C',
-            profile.compression,
         ]
         cmd += extra_cmd_options
 
@@ -191,7 +178,7 @@ class BorgCreateJob(BorgJob):
             pattern_file = tempfile.NamedTemporaryFile('w', delete=True)
             pattern_file.write('\n'.join(exclude_dirs))
             pattern_file.flush()
-            cmd.extend(['--exclude-from', pattern_file.name])
+            cmd.extend(['--exclude-file', pattern_file.name])
             ret['cleanup_files'].append(pattern_file)
 
         # Currently not in use, but may be added back to the UI later.
@@ -203,15 +190,13 @@ class BorgCreateJob(BorgJob):
         # Add repo url and source dirs.
         new_archive_name = format_archive_name(profile, profile.new_archive_name)
 
-        if borg_compat.check('V2'):
-            cmd += ["-r", profile.repo.url, new_archive_name]
-        else:
-            cmd.append(f"{profile.repo.url}::{new_archive_name}")
+        cmd += ["--tag", new_archive_name]
 
         for f in SourceFileModel.select().where(SourceFileModel.profile == profile.id):
             cmd.append(f.dir)
 
         cmd += suffix_command
+        ret['archive_name'] = new_archive_name
 
         ret['message'] = trans_late('messages', 'Starting backup…')
         ret['ok'] = True

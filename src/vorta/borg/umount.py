@@ -1,4 +1,5 @@
 import os.path
+import sys
 
 import psutil
 
@@ -21,7 +22,7 @@ class BorgUmountJob(BorgJob):
         archive_mount_points = []
         partitions = psutil.disk_partitions(all=True)
         for p in partitions:
-            if p.device == 'borgfs':
+            if p.fstype in {'fuse', 'fuse.restic', 'osxfuse'} or 'restic' in p.device:
                 archive_mount_points.append(os.path.realpath(p.mountpoint))
         ret['active_mount_points'] = archive_mount_points
 
@@ -36,7 +37,10 @@ class BorgUmountJob(BorgJob):
             ret['current_archive'] = archive_name
         ret['mount_point'] = mount_point
 
-        cmd = ['borg', 'umount', '--log-json', mount_point]
+        if sys.platform == 'darwin':
+            cmd = ['umount', mount_point]
+        else:
+            cmd = ['fusermount', '-u', mount_point]
 
         ret['ok'] = True
         ret['cmd'] = cmd

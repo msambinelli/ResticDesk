@@ -71,7 +71,7 @@ class RepoWindow(AddRepoBase, AddRepoUI):
                 self.repoLabel.setText(self.tr('Repository Path:'))
                 self.is_remote_repo = False
 
-        dialog = choose_file_dialog(self, self.tr("Choose Location of Borg Repository"))
+        dialog = choose_file_dialog(self, self.tr("Choose Location of Restic Repository"))
         dialog.open(receive)
 
     def use_remote_repo_action(self):
@@ -101,7 +101,7 @@ class RepoWindow(AddRepoBase, AddRepoUI):
             self.sshComboBox.addItem(f'{key}', key)
 
     def validate(self):
-        """Pre-flight check for valid input and borg binary."""
+        """Pre-flight check for valid input and restic binary."""
         if self.is_remote_repo and not re.match(r'.+:.+', self.values['repo_url']):
             self._set_status(self.tr('Please enter a valid repo URL or select a local path.'))
             return False

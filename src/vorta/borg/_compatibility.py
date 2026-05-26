@@ -1,14 +1,14 @@
 from packaging.version import Version
 
 MIN_BORG_FOR_FEATURE = {
-    "BLAKE2": Version("1.1.4"),
-    "ZSTD": Version("1.1.4"),
-    "JSON_LOG": Version("1.1.0"),
-    "DIFF_JSON_LINES": Version("1.1.16"),
-    "COMPACT_SUBCOMMAND": Version("1.2.0a1"),
-    "V122": Version("1.2.2"),
-    "V2": Version("2.0.0b10"),
-    'CHANGE_PASSPHRASE': Version('1.1.0'),
+    "BLAKE2": Version("0.12.0"),
+    "ZSTD": Version("0.16.0"),
+    "JSON_LOG": Version("0.9.0"),
+    "DIFF_JSON_LINES": Version("0.13.0"),
+    "COMPACT_SUBCOMMAND": Version("99.0.0"),
+    "V122": Version("0.12.0"),
+    "V2": Version("0.12.0"),
+    'CHANGE_PASSPHRASE': Version('0.9.0'),
     # add new version-checks here.
 }
 
@@ -20,7 +20,7 @@ class BorgCompatibility:
     to customize Borg commands by version in the future.
     """
 
-    version = "1.1.4"
+    version = "0.16.0"
     path = ""
 
     def set_version(self, version, path):
@@ -31,5 +31,5 @@ class BorgCompatibility:
         return Version(self.version) >= MIN_BORG_FOR_FEATURE[feature_name]
 
     def get_version(self):
-        """Returns the version and path of the Borg binary."""
+        """Returns the version and path of the restic binary."""
         return self.version, self.path

@@ -81,26 +81,23 @@ class BorgJob(JobInterface):
             cmd = cmd[:2] + extra_args + cmd[2:]
 
         env = os.environ.copy()
-        env['BORG_HOSTNAME_IS_UNIQUE'] = '1'
-        env['BORG_RELOCATED_REPO_ACCESS_IS_OK'] = '1'
-        env['BORG_RSH'] = 'ssh'
+        env['RESTIC_REPOSITORY'] = params.get('repo_url', '')
+        env['RESTIC_PASSWORD'] = ''
 
         if 'additional_env' in params:
             env = {**env, **params['additional_env']}
 
         password = params.get('password')
         if password is not None:
-            env['BORG_PASSPHRASE'] = password
-        else:
-            env['BORG_PASSPHRASE'] = '9999999'  # Set dummy password to avoid prompt.
+            env['RESTIC_PASSWORD'] = password
 
-        if env.get('BORG_PASSCOMMAND', False):
-            env.pop('BORG_PASSPHRASE', None)  # Unset passphrase
+        if env.get('RESTIC_PASSWORD_COMMAND', False):
+            env.pop('RESTIC_PASSWORD', None)
 
         ssh_key = params.get('ssh_key')
         if ssh_key is not None:
             ssh_key_path = os.path.expanduser(f'~/.ssh/{ssh_key}')
-            env['BORG_RSH'] += f' -i {ssh_key_path}'
+            env['RESTIC_PASSWORD_COMMAND'] = env.get('RESTIC_PASSWORD_COMMAND', '')
 
         self.env = env
         self.cmd = cmd
@@ -141,7 +138,7 @@ class BorgJob(JobInterface):
         ret = {'ok': False}
 
         if cls.prepare_bin() is None:
-            ret['message'] = trans_late('messages', 'Borg binary was not found.')
+            ret['message'] = trans_late('messages', 'Restic binary was not found.')
             return ret
 
         if profile.repo is None:
@@ -149,7 +146,7 @@ class BorgJob(JobInterface):
             return ret
 
         if not borg_compat.check('JSON_LOG'):
-            ret['message'] = trans_late('messages', 'Your Borg version is too old. >=1.1.0 is required.')
+            ret['message'] = trans_late('messages', 'Your Restic version is too old.')
             return ret
 
         # Try to get password from chosen keyring backend.
@@ -202,27 +199,17 @@ class BorgJob(JobInterface):
 
     @classmethod
     def prepare_bin(cls):
-        """Find packaged borg binary. Prefer globally installed."""
+        """Find restic binary."""
         # On MacOS, the PATH environment variable does not seem to be set when run as a pyinstaller binary.
         # More info at https://github.com/borgbase/vorta/issues/2100
-        # Set the path to also find homebrew installs of Borg, and avoid falling back to the embedded binary.
+        # Set the path to also find homebrew installs.
         if sys.platform == 'darwin':
             current_path = os.environ.get("PATH", "/usr/bin:/bin")
             os.environ["PATH"] = f"{current_path}:/opt/homebrew/bin:/usr/local/bin"
-        # Now continue looking for the borg binary to use
-        borg_in_path = shutil.which('borg')
+        restic_in_path = shutil.which('restic')
 
-        if borg_in_path:
-            return borg_in_path
-        elif sys.platform == 'darwin':
-            # macOS: Look in pyinstaller bundle
-            from Foundation import NSBundle
-
-            mainBundle = NSBundle.mainBundle()
-
-            bundled_borg = os.path.join(mainBundle.bundlePath(), 'Contents', 'Resources', 'borg-dir', 'borg.exe')
-            if os.path.isfile(bundled_borg):
-                return bundled_borg
+        if restic_in_path:
+            return restic_in_path
         return None
 
     def run(self):
@@ -270,6 +257,7 @@ class BorgJob(JobInterface):
                 return ''
 
         stdout = []
+        json_events = []
         while True:
             # Wait for new output
             select.select([p.stdout, p.stderr], [], [], 0.1)
@@ -280,8 +268,10 @@ class BorgJob(JobInterface):
                 for line in stderr.split('\n'):
                     try:
                         parsed = json.loads(line)
+                        if isinstance(parsed, dict):
+                            json_events.append(parsed)
 
-                        if parsed['type'] == 'log_message':
+                        if parsed.get('type') == 'log_message':
                             context = {
                                 'msgid': parsed.get('msgid'),
                                 'repo_url': self.params['repo_url'],
@@ -298,13 +288,13 @@ class BorgJob(JobInterface):
                                 # Append log to list of error messages
                                 error_messages.append((level_int, parsed["message"]))
 
-                        elif parsed['type'] == 'file_status':
+                        elif parsed.get('type') == 'file_status':
                             self.app.backup_log_event.emit(
                                 f'[{self.params["profile_name"]}] {parsed["path"]} ({parsed["status"]})', {}
                             )
-                        elif parsed['type'] == 'progress_percent' and parsed.get("message"):
+                        elif parsed.get('type') == 'progress_percent' and parsed.get("message"):
                             self.app.backup_log_event.emit(f'[{self.params["profile_name"]}] {parsed["message"]}', {})
-                        elif parsed['type'] == 'archive_progress' and not parsed.get('finished', False):
+                        elif parsed.get('type') == 'archive_progress' and not parsed.get('finished', False):
                             msg = (
                                 f"{translate('BorgJob','Files')}: {parsed['nfiles']}, "
                                 f"{translate('BorgJob','Original')}: {pretty_bytes(parsed['original_size'])}, "
@@ -312,6 +302,12 @@ class BorgJob(JobInterface):
                                 f"{translate('BorgJob','Deduplicated')}: {pretty_bytes(parsed.get('deduplicated_size', 0))}"  # noqa: E501
                             )
                             self.app.backup_progress_event.emit(f"[{self.params['profile_name']}] {msg}")
+                        elif parsed.get('message_type') in {'status', 'summary', 'error'}:
+                            if parsed.get('message_type') == 'status':
+                                files_done = parsed.get('files_done', 0)
+                                bytes_done = parsed.get('bytes_done', 0)
+                                msg = f"{translate('BorgJob','Files')}: {files_done}, {translate('BorgJob','Deduplicated')}: {pretty_bytes(bytes_done)}"
+                                self.app.backup_progress_event.emit(f"[{self.params['profile_name']}] {msg}")
                     except json.decoder.JSONDecodeError:
                         msg = line.strip()
                         if msg:  # Log only if there is something to log.
@@ -334,7 +330,13 @@ class BorgJob(JobInterface):
         try:
             result['data'] = json.loads(stdout)
         except ValueError:
-            result['data'] = stdout
+            parsed_lines = []
+            for line in stdout.splitlines():
+                try:
+                    parsed_lines.append(json.loads(line))
+                except ValueError:
+                    continue
+            result['data'] = parsed_lines if parsed_lines else stdout
 
         log_entry.returncode = p.returncode
         log_entry.repo_url = self.params.get('repo_url', None)

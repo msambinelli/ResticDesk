@@ -41,10 +41,10 @@ class ShellCommandsPage(BaseTab, QWidget):
         borg_template = self.borgCreateHelpLabel.text()
         borg_sentence = format_richtext(
             escape(self.tr('Extra arguments for %1. Possible options are listed in %2.')),
-            italic('borg create'),
+            italic('restic backup'),
             link(
-                'https://borgbackup.readthedocs.io/en/stable/usage/create.html',
-                self.tr('the borg documentation'),
+                'https://restic.readthedocs.io/en/stable/040_backup.html',
+                self.tr('the restic documentation'),
             ),
         )
         self.borgCreateHelpLabel.setText(format_richtext(borg_template, borg_sentence))

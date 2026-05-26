@@ -64,7 +64,7 @@ class RepoTab(BaseTab, RepoBase, RepoUI):
         self.repoCompression.addItem(self.tr('Zstandard Level 3 (modern)'), 'zstd,3')
         self.repoCompression.addItem(self.tr('Zstandard Level 8 (modern)'), 'zstd,8')
 
-        # zlib and lzma come from python stdlib and are there (and in borg) since long.
+        # zlib and lzma come from python stdlib and are widely available.
         # but maybe not much reason to start with these nowadays, considering zstd supports
         # a very wide range of compression levels and has great speed. if speed is more
         # important than compression, lz4 is even a little better.
@@ -92,13 +92,13 @@ class RepoTab(BaseTab, RepoBase, RepoUI):
         borgbase_template = self.borgbaseLinkLabel.text()
         borgbase_sentence = format_richtext(
             escape(translate('Form', self.borgbase_sentence)),
-            link('https://www.borgbase.com/?utm_source=vorta&utm_medium=app', 'BorgBase'),
+            link('https://restic.net/', 'Restic'),
         )
         self.borgbaseLinkLabel.setText(format_richtext(borgbase_template, borgbase_sentence))
 
         compression_template = self.compressionHelpLink.text()
         compression_link = link(
-            'https://borgbackup.readthedocs.io/en/stable/usage/help.html#borg-help-compression',
+            'https://restic.readthedocs.io/en/stable/040_backup.html#file-compression',
             translate('Form', self.compression_help_text),
         )
         self.compressionHelpLink.setText(format_richtext(compression_template, compression_link))
@@ -388,7 +388,7 @@ class RepoTab(BaseTab, RepoBase, RepoUI):
         if result['returncode'] == 0:
             msg.setIcon(QMessageBox.Icon.Information)
             msg.setWindowTitle(self.tr("Passphrase Changed"))
-            msg.setText(self.tr("The borg passphrase was successfully changed."))
+            msg.setText(self.tr("The repository passphrase was successfully changed."))
         else:
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setWindowTitle(self.tr("Passphrase Change Failed"))

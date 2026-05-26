@@ -243,7 +243,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         prune_sentence = format_richtext(
             escape(translate('Form', self.pruning_help_text)),
             link(
-                'https://borgbackup.readthedocs.io/en/stable/usage/prune.html',
+                'https://restic.readthedocs.io/en/stable/060_forget.html',
                 translate('Form', self.pruning_help_link_text),
                 color="#FF4500",
             ),
@@ -398,7 +398,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         # task in progress -> disable all
         reason = ""
         if not self.repoactions_enabled:
-            reason = self.tr("(borg already running)")
+            reason = self.tr("(backup job already running)")
 
         # Disable the delete and refresh buttons if no archive is selected
         if self.repoactions_enabled and len(indexes) > 0:
@@ -490,7 +490,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
             self._set_status(params['message'])
             return
 
-        # Conditions are met (borg binary available, etc)
+        # Conditions are met (backup binary available, etc)
         row_selected = self.archiveTable.selectionModel().selectedRows()
         if row_selected:
             archive_cell = self.archiveTable.item(row_selected[0].row(), 4)
@@ -825,7 +825,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
 
     def toggle_compact_button_visibility(self):
         """
-        Enable or disable the compact button depending on the Borg version.
+        Enable or disable the compact button depending on backend support.
         This function runs once on startup, and every time the profile is changed.
         """
         if borg_compat.check("COMPACT_SUBCOMMAND"):
@@ -834,4 +834,4 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         else:
             self.compactButton.setEnabled(False)
             tooltip = self.tooltip_dict[self.compactButton]
-            self.compactButton.setToolTip(tooltip + " " + self.tr("(This feature needs Borg 1.2.0 or higher)"))
+            self.compactButton.setToolTip(tooltip + " " + self.tr("(This feature is currently unavailable)"))

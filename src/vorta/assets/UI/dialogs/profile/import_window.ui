@@ -22,7 +22,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
-        <string>Borg passphrase:</string>
+        <string>Repository passphrase:</string>
        </property>
       </widget>
      </item>

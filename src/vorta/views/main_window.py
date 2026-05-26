@@ -48,7 +48,7 @@ class MainWindow(MainWindowBase, MainWindowUI):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle('Vorta for Borg Backup')
+        self.setWindowTitle('Vorta for Restic')
         self.app = parent
         self.setWindowIcon(get_colored_icon("icon"))
         if sys.platform.startswith('linux'):
@@ -81,7 +81,7 @@ class MainWindow(MainWindowBase, MainWindowUI):
         self.scheduleTab = ScheduleTab(self.scheduleTabSlot, profile_provider=self.get_current_profile)
         self.miscTab = MiscTab(self.SettingsTabSlot, profile_provider=self.get_current_profile)
         self.aboutTab = AboutTab(self.AboutTabSlot, profile_provider=self.get_current_profile)
-        self.aboutTab.set_borg_details(borg_compat.version, borg_compat.path)
+        self.aboutTab.set_restic_details(borg_compat.version, borg_compat.path)
         self.miscWidget.hide()
         self.tabWidget.setCurrentIndex(0)
 

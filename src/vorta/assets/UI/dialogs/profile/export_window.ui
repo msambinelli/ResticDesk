@@ -20,10 +20,10 @@
    <item>
     <widget class="QCheckBox" name="storePassword">
      <property name="toolTip">
-      <string>Include Borg passphrase in export. Use with caution!</string>
+      <string>Include repository passphrase in export. Use with caution!</string>
      </property>
      <property name="text">
-      <string>Include borg passphrase in export</string>
+      <string>Include repository passphrase in export</string>
      </property>
     </widget>
    </item>

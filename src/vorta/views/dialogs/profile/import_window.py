@@ -25,7 +25,7 @@ class ImportWindow(ImportWindowUI, ImportWindowBase):
         self.setWindowTitle(self.tr("Import Profile"))
 
     def init_repo_password_field(self, profile_export):
-        """Try to prefill the borg passphrase either from the export or from the keyring."""
+        """Try to prefill the repository passphrase either from the export or from the keyring."""
         self.repoPassword.textChanged[str].connect(self.on_repo_password_changed)
         if profile_export.repo_password:
             self.repoPassword.setText(profile_export.repo_password)

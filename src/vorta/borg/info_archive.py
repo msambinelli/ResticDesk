@@ -1,5 +1,6 @@
-from vorta.store.models import ArchiveModel, RepoModel
-from vorta.utils import borg_compat
+from datetime import datetime as dt
+
+from vorta.store.models import ArchiveModel
 
 from .borg_job import BorgJob
 
@@ -21,42 +22,23 @@ class BorgInfoArchiveJob(BorgJob):
             return ret
 
         ret['ok'] = True
-        ret['cmd'] = ['borg', 'info', '--log-json', '--json']
-        if borg_compat.check('V2'):
-            ret['cmd'].extend(["-r", profile.repo.url, '-a', archive_name])
-        else:
-            ret['cmd'].append(f'{profile.repo.url}::{archive_name}')
+        ret['cmd'] = ['restic', 'snapshots', '--json', '--tag', archive_name, '-r', profile.repo.url]
         ret['archive_name'] = archive_name
 
         return ret
 
     def process_result(self, result):
         if result['returncode'] == 0:
-            remote_archives = result['data'].get('archives', [])
-
-            # get info stored during BorgJob.prepare()
-            # repo_id = self.params['repo_id']
+            snapshots = result['data'] if isinstance(result['data'], list) else []
             repo_id = result['params']['repo_id']
-
-            # Update remote archives.
-            for remote_archive in remote_archives:
-                archive = ArchiveModel.get_or_none(snapshot_id=remote_archive['id'], repo=repo_id)
-                if archive is None:
-                    # archive id was changed during rename, so we need to find it by name
-                    archive = ArchiveModel.get_or_none(name=remote_archive['name'], repo=repo_id)
-                    archive.snapshot_id = remote_archive['id']
-
-                archive.name = remote_archive['name']  # in case name changed
-                # archive.time = parser.parse(remote_archive['time'])
-                archive.duration = remote_archive['duration']
-                archive.size = remote_archive['stats']['deduplicated_size']
-
-                archive.save()
-
-            if 'cache' in result['data']:
-                stats = result['data']['cache']['stats']
-                repo = RepoModel.get(id=result['params']['repo_id'])
-                repo.total_size = stats['total_size']
-                repo.unique_size = stats['unique_size']
-                repo.total_unique_chunks = stats['total_unique_chunks']
-                repo.save()
+            if not snapshots:
+                return
+            latest = snapshots[-1]
+            archive = ArchiveModel.get_or_none(name=result['params']['archive_name'], repo=repo_id)
+            if archive is None:
+                return
+            archive.snapshot_id = latest.get('short_id') or latest.get('id') or archive.snapshot_id
+            snapshot_time = latest.get('time')
+            if snapshot_time:
+                archive.time = dt.fromisoformat(snapshot_time.replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
+            archive.save()

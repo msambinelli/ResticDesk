@@ -13,18 +13,12 @@ def test_create_paths_from_command():
 
     assert 'cmd' in result
     assert result['cmd'] == [
-        'borg',
-        'create',
-        '--list',
-        '--progress',
-        '--info',
-        '--log-json',
+        'restic',
+        'backup',
         '--json',
-        '--filter=AM',
-        '-C',
-        'lz4',
         '--one-file-system',
-        'i0fi93@i593.repo.borgbase.com:repo::a1',
+        '--tag',
+        'a1',
         TEST_SOURCE_DIR,
     ]
 
@@ -35,18 +29,12 @@ def test_create_paths_from_command():
 
     assert 'cmd' in result
     assert result['cmd'] == [
-        'borg',
-        'create',
-        '--list',
-        '--progress',
-        '--info',
-        '--log-json',
+        'restic',
+        'backup',
         '--json',
-        '--filter=AM',
-        '-C',
-        'lz4',
         '--paths-from-command',
-        'i0fi93@i593.repo.borgbase.com:repo::a1',
+        '--tag',
+        'a1',
         '--',
         'echo',
         TEST_SOURCE_DIR,

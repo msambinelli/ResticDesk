@@ -33,7 +33,7 @@ class VortaApp(QtSingleApplication):
     """
     All windows and QWidgets are children of this app.
 
-    When running Borg-commands, the class `BorgJob` will emit events
+    When running backup commands, the class `BorgJob` will emit events
     via the `VortaApp` class to which other windows will subscribe to.
     """
 
@@ -87,7 +87,7 @@ class VortaApp(QtSingleApplication):
         self.check_failed_event.connect(self.check_failed_response)
         self.backup_log_event.connect(self.react_to_log)
         self.aboutToQuit.connect(self.quit_app_action)
-        self.set_borg_details_action()
+        self.set_backup_engine_details_action()
         if sys.platform == 'darwin':
             self.check_darwin_permissions()
 
@@ -164,34 +164,34 @@ class VortaApp(QtSingleApplication):
             self.create_backups_cmdline(profile_name)
 
     # No need to add this function to JobsManager because it doesn't require to lock a repo.
-    def set_borg_details_action(self):
+    def set_backup_engine_details_action(self):
         params = BorgVersionJob.prepare()
         if not params['ok']:
-            self._alert_missing_borg()
+            self._alert_missing_restic()
             return
         job = BorgVersionJob(params['cmd'], params)
-        job.result.connect(self.set_borg_details_result)
+        job.result.connect(self.set_backup_engine_details_result)
         self.jobs_manager.add_job(job)
 
-    def set_borg_details_result(self, result):
+    def set_backup_engine_details_result(self, result):
         """
         Receive result from BorgVersionJob.
         If no valid version was found, display an error.
         """
         if 'version' in result['data']:
             borg_compat.set_version(result['data']['version'], result['data']['path'])
-            self.main_window.aboutTab.set_borg_details(borg_compat.version, borg_compat.path)
+            self.main_window.aboutTab.set_restic_details(borg_compat.version, borg_compat.path)
             self.main_window.repoTab.toggle_available_compression()
             self.main_window.archiveTab.toggle_compact_button_visibility()
             self.scheduler.reload_all_timers()  # Start timer after Borg version is set.
         else:
-            self._alert_missing_borg()
+            self._alert_missing_restic()
 
-    def _alert_missing_borg(self):
+    def _alert_missing_restic(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Icon.Critical)
-        msg.setText(self.tr("No Borg Binary Found"))
-        msg.setInformativeText(self.tr("Vorta was unable to locate a usable Borg Backup binary."))
+        msg.setText(self.tr("No Restic Binary Found"))
+        msg.setInformativeText(self.tr("Vorta was unable to locate a usable Restic binary."))
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
@@ -232,7 +232,7 @@ class VortaApp(QtSingleApplication):
 
     def react_to_log(self, mgs, context):
         """
-        Trigger Vorta actions based on Borg logs. E.g. repo lock.
+        Trigger Vorta actions based on backup logs. E.g. repo lock.
         """
         msgid = context.get('msgid')
         if msgid == 'LockTimeout':
@@ -249,7 +249,7 @@ class VortaApp(QtSingleApplication):
             msg.setText(self.tr(f"The repository at {repo_url} might be in use elsewhere."))
             msg.setInformativeText(
                 self.tr(
-                    "Only break the lock if you are certain no other Borg process "
+                    "Only break the lock if you are certain no other backup process "
                     "on any machine is accessing the repository. Cancel or break the lock?"
                 )
             )
@@ -347,7 +347,7 @@ class VortaApp(QtSingleApplication):
                 # warning
                 msg.setIcon(QMessageBox.Icon.Warning)
                 text = format_richtext(
-                    escape(translate('VortaApp', 'Borg exited with warning status (rc 1). See the %1 for details.')),
+                    escape(translate('VortaApp', 'Backup exited with warning status (rc 1). See the %1 for details.')),
                     link(config.LOG_DIR.as_uri(), translate('messages', 'logs')),
                 )
                 infotext = error_message

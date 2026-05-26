@@ -79,7 +79,7 @@
          <item>
           <widget class="QLineEdit" name="repoURL">
            <property name="placeholderText">
-            <string>ssh://abc123@abc123.repo.borgbase.com/./repo</string>
+            <string>sftp:user@example.com:/backups/restic-repo</string>
            </property>
           </widget>
          </item>
@@ -181,7 +181,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Extra Borg Arguments:</string>
+          <string>Extra Restic Arguments:</string>
          </property>
         </widget>
        </item>

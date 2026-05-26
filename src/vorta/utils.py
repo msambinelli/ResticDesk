@@ -341,7 +341,7 @@ def get_sorted_wifis(profile):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Vorta Backup GUI for Borg.')
+    parser = argparse.ArgumentParser(description='Vorta Backup GUI for Restic.')
     parser.add_argument('--version', '-V', action='store_true', help="Show version and exit.")
     parser.add_argument(
         '--daemonize',

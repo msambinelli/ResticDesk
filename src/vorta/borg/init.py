@@ -30,22 +30,9 @@ class BorgInitJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        if borg_compat.check('V2'):
-            cmd = [
-                "borg",
-                "repo-create",
-                "--info",
-                "--log-json",
-                f"--encryption={params['encryption']}",
-                "-r",
-                params['repo_url'],
-            ]
-        else:
-            cmd = ["borg", "init", "--info", "--log-json"]
-            cmd.append(f"--encryption={params['encryption']}")
-            cmd.append(params['repo_url'])
+        cmd = ["restic", "init", "-r", params['repo_url']]
 
-        ret['additional_env'] = {'BORG_RSH': 'ssh -oStrictHostKeyChecking=accept-new'}
+        ret['additional_env'] = {}
 
         ret['encryption'] = params['encryption']
         ret['password'] = params['password']

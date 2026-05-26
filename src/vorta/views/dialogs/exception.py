@@ -28,7 +28,7 @@ class ExceptionDetails:
     def get_exception_details(exception):
         details = ExceptionDetails.get_os_details()
         details += "\nDate and Time: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        details += "\nBorg Version: " + borg_compat.version
+        details += "\nRestic Version: " + borg_compat.version
         details += "\nVorta Version: " + __version__
         details += "\n" + exception
         return details

@@ -1,7 +1,5 @@
 from vorta.i18n import trans_late
 from vorta.store.models import RepoModel
-from vorta.utils import borg_compat
-
 from .borg_job import BorgJob, FakeProfile, FakeRepo
 
 
@@ -29,16 +27,9 @@ class BorgInfoRepoJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        if borg_compat.check('V2'):
-            cmd = ["borg", "repo-info", "--info", "--json", "--log-json", "-r"]
-        else:
-            cmd = ["borg", "info", "--info", "--json", "--log-json"]
-        cmd.append(profile.repo.url)
+        cmd = ["restic", "snapshots", "--json", "-r", profile.repo.url]
 
-        ret['additional_env'] = {
-            'BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK': "yes",
-            'BORG_RSH': 'ssh -oStrictHostKeyChecking=accept-new',
-        }
+        ret['additional_env'] = {}
 
         ret['password'] = params['password']  # Empty password is '', which disables prompt
         if params['password'] != '':
@@ -58,13 +49,10 @@ class BorgInfoRepoJob(BorgJob):
             new_repo, _ = RepoModel.get_or_create(
                 url=result['cmd'][-1], defaults={'name': result['params']['repo_name']}
             )
-            if 'cache' in result['data']:
-                stats = result['data']['cache']['stats']
-                new_repo.total_size = stats['total_size']
-                new_repo.unique_size = stats['unique_size']
-                new_repo.total_unique_chunks = stats['total_unique_chunks']
-            if 'encryption' in result['data']:
-                new_repo.encryption = result['data']['encryption']['mode']
+            new_repo.total_size = None
+            new_repo.unique_size = None
+            new_repo.total_unique_chunks = None
+            new_repo.encryption = 'repokey'
             if new_repo.encryption != 'none':
                 self.keyring.set_password("vorta-repo", new_repo.url, result['params']['password'])
             new_repo.extra_borg_arguments = result['params']['extra_borg_arguments']

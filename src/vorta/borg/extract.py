@@ -1,8 +1,5 @@
-import tempfile
-
 from PyQt6.QtCore import QModelIndex, Qt
 
-from vorta.utils import borg_compat
 from vorta.views.dialogs.archive.extract import ExtractTree, FileData
 from vorta.views.partials.treemodel import FileSystemItem, path_to_str
 
@@ -31,19 +28,14 @@ class BorgExtractJob(BorgJob):
         else:
             ret['ok'] = False  # Set back to false, so we can do our own checks here.
 
-        cmd = ['borg', 'extract', '--list', '--info', '--log-json']
-        if borg_compat.check('V2'):
-            cmd += ['-r', profile.repo.url, archive_name]
-        else:
-            cmd.append(f'{profile.repo.url}::{archive_name}')
+        cmd = ['restic', 'restore', 'latest', '--json', '--tag', archive_name, '--target', destination_folder]
 
         # process selected items
         # all items will be excluded beside the one actively selected in the
         # dialog.
         # Unselected (and excluded) parent folders will be restored by borg
         # but without the metadata stored in the archive.
-        pattern_file = tempfile.NamedTemporaryFile('w', delete=True)
-        pattern_file.write("P pf\n")
+        include_paths = []
 
         indexes = [QModelIndex()]
         while indexes:
@@ -55,12 +47,10 @@ class BorgExtractJob(BorgJob):
 
                 item: FileSystemItem[FileData] = new_index.internalPointer()
                 if item.data.checkstate == Qt.CheckState.Checked:
-                    pattern_file.write("+ " + path_to_str(item.path) + "\n")
+                    include_paths.append(path_to_str(item.path))
 
-        pattern_file.write("- fm:*\n")
-        pattern_file.flush()
-        cmd.extend(['--patterns-from', pattern_file.name])
-        ret['cleanup_files'].append(pattern_file)
+        for include_path in include_paths:
+            cmd.extend(['--include', include_path])
 
         ret['ok'] = True
         ret['cmd'] = cmd
