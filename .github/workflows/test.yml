@@ -3,6 +3,9 @@ name: Test
 on:
   push:
     branches: [master]
+  schedule:
+    # Daily run on default branch (master) at 03:00 UTC.
+    - cron: "0 3 * * *"
   pull_request:
   workflow_dispatch:
     inputs:

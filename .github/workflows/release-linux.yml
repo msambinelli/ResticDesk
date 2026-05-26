@@ -1,0 +1,132 @@
+name: Release Linux Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-packages:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare metadata
+        id: meta
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb packages (Ubuntu and Debian)
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          mkdir -p dist
+
+          for FLAVOR in ubuntu debian; do
+            ROOT="dist/${FLAVOR}/root"
+            CTRL="dist/${FLAVOR}/DEBIAN"
+
+            rm -rf "dist/${FLAVOR}"
+            mkdir -p "$ROOT/usr/lib/resticdesk" "$ROOT/usr/bin" "$ROOT/usr/share/applications" "$ROOT/usr/share/icons/hicolor/scalable/apps" "$CTRL"
+
+            cp -r src "$ROOT/usr/lib/resticdesk/"
+            cp pyproject.toml README.md LICENSE.txt "$ROOT/usr/lib/resticdesk/"
+
+            printf '%s\n' \
+              '#!/usr/bin/env bash' \
+              'export PYTHONPATH="/usr/lib/resticdesk/src:${PYTHONPATH}"' \
+              'exec python3 -m vorta "$@"' \
+              > "$ROOT/usr/bin/resticdesk"
+            chmod 755 "$ROOT/usr/bin/resticdesk"
+
+            sed \
+              -e 's/^Name=.*/Name=ResticDesk/' \
+              -e 's/^Exec=.*/Exec=resticdesk/' \
+              -e 's/^Icon=.*/Icon=resticdesk/' \
+              src/vorta/assets/metadata/com.borgbase.Vorta.desktop \
+              > "$ROOT/usr/share/applications/resticdesk.desktop"
+
+            cp src/vorta/assets/icons/icon.svg "$ROOT/usr/share/icons/hicolor/scalable/apps/resticdesk.svg"
+
+            printf '%s\n' \
+              'Package: resticdesk' \
+              "Version: ${VERSION}-1" \
+              'Section: utils' \
+              'Priority: optional' \
+              'Architecture: amd64' \
+              'Maintainer: msambinelli' \
+              'Depends: python3, python3-pyqt6, python3-psutil, python3-peewee, python3-packaging, restic' \
+              'Description: ResticDesk desktop backup client' \
+              ' ResticDesk is a desktop GUI backup client powered by Restic.' \
+              > "$CTRL/control"
+
+            dpkg-deb --build "dist/${FLAVOR}" "dist/resticdesk_${VERSION}-1_${FLAVOR}_amd64.deb"
+          done
+
+      - name: Build Arch package (.pkg.tar.zst)
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.meta.outputs.version }}"
+          TAG="${{ steps.meta.outputs.tag }}"
+
+          mkdir -p dist/arch-src
+          git archive --format=tar --prefix="resticdesk-${VERSION}/" "${TAG}" | tar -x -C dist/arch-src
+          tar -C dist/arch-src -czf "dist/resticdesk-${VERSION}.tar.gz" "resticdesk-${VERSION}"
+
+          printf '%s\n' \
+            "pkgname=resticdesk" \
+            "pkgver=${VERSION}" \
+            'pkgrel=1' \
+            "pkgdesc='ResticDesk: desktop GUI backup client powered by Restic'" \
+            "arch=('x86_64')" \
+            "url='https://github.com/msambinelli/ResticDesk'" \
+            "license=('GPL3')" \
+            "depends=('python' 'python-pyqt6' 'python-psutil' 'python-peewee' 'python-packaging' 'restic')" \
+            "source=(\"resticdesk-${VERSION}.tar.gz\")" \
+            "sha256sums=('SKIP')" \
+            '' \
+            'package() {' \
+            "  cd \"resticdesk-${VERSION}\"" \
+            '  install -dm755 "$pkgdir/usr/lib/resticdesk"' \
+            '  cp -r src "$pkgdir/usr/lib/resticdesk/"' \
+            '  install -m644 pyproject.toml "$pkgdir/usr/lib/resticdesk/"' \
+            '  install -m644 README.md "$pkgdir/usr/lib/resticdesk/"' \
+            '  install -m644 LICENSE.txt "$pkgdir/usr/lib/resticdesk/"' \
+            '  install -dm755 "$pkgdir/usr/bin"' \
+            '  printf "%s\n" "#!/usr/bin/env bash" "export PYTHONPATH=\"/usr/lib/resticdesk/src:${PYTHONPATH}\"" "exec python3 -m vorta \"$@\"" > "$pkgdir/usr/bin/resticdesk"' \
+            '  chmod 755 "$pkgdir/usr/bin/resticdesk"' \
+            '  install -dm755 "$pkgdir/usr/share/applications"' \
+            "  sed -e 's/^Name=.*/Name=ResticDesk/' -e 's/^Exec=.*/Exec=resticdesk/' -e 's/^Icon=.*/Icon=resticdesk/' src/vorta/assets/metadata/com.borgbase.Vorta.desktop > \"\$pkgdir/usr/share/applications/resticdesk.desktop\"" \
+            '  install -dm755 "$pkgdir/usr/share/icons/hicolor/scalable/apps"' \
+            '  install -m644 src/vorta/assets/icons/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/resticdesk.svg"' \
+            '}' \
+            > dist/PKGBUILD
+
+          docker run --rm -v "${PWD}:/work" -w /work archlinux:latest bash -lc '
+            set -euo pipefail
+            pacman -Sy --noconfirm --needed base-devel
+            useradd -m builder
+            chown -R builder:builder /work
+            su builder -c "cd /work/dist && makepkg -sf --noconfirm --nodeps"
+          '
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/resticdesk_*_ubuntu_amd64.deb
+            dist/resticdesk_*_debian_amd64.deb
+            dist/resticdesk-*.pkg.tar.*
