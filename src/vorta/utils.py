@@ -19,7 +19,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QFileInfo, QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QFileDialog, QSystemTrayIcon
 
-from vorta.borg._compatibility import BorgCompatibility
+from vorta.borg._compatibility import BorgCompatibility, ResticCompatibility
 from vorta.log import logger
 from vorta.network_status.abc import NetworkStatusMonitor
 
@@ -30,6 +30,9 @@ METRIC_UNITS = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
 NONMETRIC_UNITS = ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi', 'Yi']
 
 borg_compat = BorgCompatibility()
+# Preferred alias for new code. Keep `borg_compat` for backward compatibility.
+restic_compat = ResticCompatibility()
+restic_compat.set_version(borg_compat.version, borg_compat.path)
 _network_status_monitor = None
 
 

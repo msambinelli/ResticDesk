@@ -33,3 +33,7 @@ class BorgCompatibility:
     def get_version(self):
         """Returns the version and path of the restic binary."""
         return self.version, self.path
+
+
+class ResticCompatibility(BorgCompatibility):
+    """Preferred compatibility wrapper name for the Restic backend."""

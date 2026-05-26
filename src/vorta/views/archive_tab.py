@@ -84,6 +84,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
 
         self.archive_mount = ArchiveMount(self)
         self.archive_extract = ArchiveExtract(self)
+        self.restic_backend = True
 
         #: Tooltip dict to save the tooltips set in the designer
         self.tooltip_dict: Dict[QWidget, str] = {}
@@ -173,6 +174,13 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         self.track_backup_finished()
         self.track_profile_change(self.toggle_compact_button_visibility)
         self.track_signal(self.app.backup_cancelled_event, self.cancel_action)
+        self._sync_backend_action_visibility()
+
+    def _sync_backend_action_visibility(self):
+        path = (borg_compat.path or "").lower()
+        self.restic_backend = "restic" in path or path == ""
+        self.bRename.setVisible(not self.restic_backend)
+        self.bDiff.setVisible(not self.restic_backend)
 
     def set_icons(self):
         """Used when changing between light- and dark mode"""
@@ -218,6 +226,8 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         ]
 
         for button, connection in button_connection_pairs:
+            if not button.isVisible():
+                continue
             action = menu.addAction(button.icon(), button.text(), connection)
             action.setEnabled(button.isEnabled())
 
@@ -260,6 +270,7 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
             The enabled state, by default True
         """
         self.repoactions_enabled = enabled
+        self._sync_backend_action_visibility()
 
         for button in [
             self.bCheck,
@@ -411,7 +422,10 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
                 button.setToolTip(self.tooltip_dict.get(button, "") + " " + self.tr("(Select minimum one archive)"))
 
         # Toggle diff button
-        if self.repoactions_enabled and len(indexes) == 2:
+        if self.restic_backend:
+            self.bDiff.setEnabled(False)
+            self.bDiff.setToolTip(self.tr("Snapshot diff is currently unavailable with Restic backend."))
+        elif self.repoactions_enabled and len(indexes) == 2:
             # Enable diff button
             self.bDiff.setEnabled(True)
             self.bDiff.setToolTip(self.tooltip_dict.get(self.bDiff, ""))
@@ -425,6 +439,10 @@ class ArchiveTab(BaseTab, ArchiveTabBase, ArchiveTabUI):
         if self.repoactions_enabled and len(indexes) == 1:
             # Enable archive actions
             for widget in single_archive_action_buttons:
+                if self.restic_backend and widget is self.bRename:
+                    widget.setEnabled(False)
+                    widget.setToolTip(self.tr("Snapshot rename is not supported by Restic backend."))
+                    continue
                 widget.setEnabled(True)
 
             for index in range(layout.count()):

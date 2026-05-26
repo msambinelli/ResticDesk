@@ -25,6 +25,11 @@ Known limitations (in progress):
 - Some UI/internal names still use historical `Borg*` identifiers while the backend is already Restic.
 - Translation catalogs still contain legacy Borg strings and need a full refresh.
 
+## Known Issues
+- GUI tests can fail in headless environments due to Qt initialization constraints.
+- Some translated languages still display legacy Borg terminology until translation updates are completed.
+- Snapshot `diff` and `rename` are intentionally unavailable with the current Restic backend implementation.
+
 ## Why ResticDesk
 - Encrypted, deduplicated backups powered by Restic.
 - No vendor lock-in: local disks or your own remote storage.

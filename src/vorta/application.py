@@ -21,7 +21,7 @@ from vorta.scheduler import VortaScheduler
 from vorta.store.connection import cleanup_db
 from vorta.store.models import BackupProfileModel, SettingsModel
 from vorta.tray_menu import TrayMenu
-from vorta.utils import borg_compat, parse_args
+from vorta.utils import borg_compat, parse_args, restic_compat
 from vorta.views.main_window import MainWindow
 
 logger = logging.getLogger(__name__)
@@ -180,6 +180,7 @@ class VortaApp(QtSingleApplication):
         """
         if 'version' in result['data']:
             borg_compat.set_version(result['data']['version'], result['data']['path'])
+            restic_compat.set_version(result['data']['version'], result['data']['path'])
             self.main_window.aboutTab.set_restic_details(borg_compat.version, borg_compat.path)
             self.main_window.repoTab.toggle_available_compression()
             self.main_window.archiveTab.toggle_compact_button_visibility()
