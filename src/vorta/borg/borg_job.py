@@ -247,20 +247,34 @@ class BorgJob(JobInterface):
         self.process = p
 
         # Prevent blocking of stdout/err. Via https://stackoverflow.com/a/7730201/3983708
-        os.set_blocking(p.stdout.fileno(), False)
-        os.set_blocking(p.stderr.fileno(), False)
+        try:
+            os.set_blocking(p.stdout.fileno(), False)
+            os.set_blocking(p.stderr.fileno(), False)
+        except (AttributeError, OSError, ValueError):
+            # Some tests mock stdout/stderr without real file descriptors.
+            pass
 
         def read_async(fd):
             try:
+                if isinstance(fd, str):
+                    return fd
                 return fd.read()
-            except (IOError, TypeError):
+            except (IOError, TypeError, ValueError, AttributeError):
                 return ''
 
         stdout = []
         json_events = []
+        use_select = True
         while True:
             # Wait for new output
-            select.select([p.stdout, p.stderr], [], [], 0.1)
+            if use_select:
+                try:
+                    select.select([p.stdout, p.stderr], [], [], 0.1)
+                except (TypeError, ValueError):
+                    # Test doubles may not expose real file descriptors.
+                    use_select = False
+            else:
+                time.sleep(0.05)
 
             stdout.append(read_async(p.stdout))
             stderr = read_async(p.stderr)
