@@ -1,81 +1,95 @@
-# Vorta Backup Client <img alt="Logo" src="https://files.qmax.us/vorta/vorta-512px.png" align="right" height="50">
+# ResticDesk <img alt="Logo" src="https://files.qmax.us/vorta/vorta-512px.png" align="right" height="50">
 
-[![GitHub all releases](https://img.shields.io/github/downloads/borgbase/vorta/total?label=downloads&logo=github&color=green)](https://github.com/borgbase/vorta/releases)
-[![Flathub](https://img.shields.io/flathub/downloads/com.borgbase.Vorta?logo=flathub&logoColor=white&color=green)](https://flathub.org/apps/details/com.borgbase.Vorta)
-[![Github License](https://img.shields.io/github/license/borgbase/vorta?color=bd0000)](https://github.com/borgbase/vorta/blob/master/LICENSE.txt)
-[![pypi](https://img.shields.io/pypi/v/vorta.svg?logo=pypi&logoColor=white&color=0073b7)](https://pypi.org/project/vorta/)
-[![homebrew cask](https://img.shields.io/homebrew/cask/v/vorta?logo=homebrew&color=fbb040)](https://formulae.brew.sh/cask/vorta)
-[![Flathub](https://img.shields.io/flathub/v/com.borgbase.Vorta?color=4a86cf&logo=flathub&logoColor=white)](https://flathub.org/apps/details/com.borgbase.Vorta)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-<br>
-<br>
+ResticDesk is a desktop backup client for Linux and macOS, focused on making [Restic](https://restic.readthedocs.io/en/stable/) easier to use through a native GUI.
 
-Vorta is a backup client for macOS and Linux desktops. It integrates the mighty [BorgBackup](https://borgbackup.readthedocs.io) with your desktop environment to protect your data from disk failure, ransomware and theft.
+This project is a public fork/reboot of [Vorta](https://github.com/borgbase/vorta), migrated from Borg to Restic.
 
-https://github.com/user-attachments/assets/541c15a1-60bd-4ec7-afb0-0db28b734228
+## Project Scope
+- This project is primarily maintained for personal use. If it ends up being useful for other people, even better.
+- Development is intentionally lightweight and done in a vibe-coding style, since maintainer time and long-term commitment are limited.
 
-## Why is this great? 🤩
-- **Encrypted, deduplicated and compressed backups** using [Borg](https://borgbackup.readthedocs.io) as backend.
-- **No vendor lock-in** – back up to local drives, your own server or [BorgBase](https://www.borgbase.com), a hosting service for Borg backups.
-- **Open source** – free to use, modify, improve and audit.
-- **Flexible profiles** to group source folders, backup destinations and schedules.
-- **One place** to view all point-in-time archives and restore individual files.
+## Project Status
+Current status: `alpha`.
 
-Learn more on [Vorta's website](https://vorta.borgbase.com).
+Working today:
+- Create backups with compression settings and profile-based sources.
+- List snapshots and refresh metadata.
+- Restore files/folders from selected snapshots.
+- Retention and cleanup via `restic forget --prune`.
+- Repository check via `restic check`.
+- Repository mount/unmount.
+
+Known limitations (in progress):
+- Snapshot rename is not supported (Restic does not provide archive-style rename semantics).
+- Snapshot diff in the legacy Vorta UI format is currently disabled.
+- Some UI/internal names still use historical `Borg*` identifiers while the backend is already Restic.
+- Translation catalogs still contain legacy Borg strings and need a full refresh.
+
+## Why ResticDesk
+- Encrypted, deduplicated backups powered by Restic.
+- No vendor lock-in: local disks or your own remote storage.
+- Multiple backup profiles with scheduling and per-profile source selection.
+- Point-in-time snapshot browsing and restore from one interface.
+- Open source and auditable.
 
 ## Installation
-Vorta should work on all platforms that support Qt and Borg. This includes macOS, Ubuntu, Debian, Fedora, Arch Linux and many others. Windows is currently not supported by Borg, but this may change in the future.
+No official release binaries are published yet for this fork.
 
-See our website for [download links and install instructions](https://vorta.borgbase.com/install).
+For now, use the development setup below.
 
-## Connect and Contribute
-- To discuss everything around using, improving, packaging and translating Vorta, join the [discussion on Github](https://github.com/borgbase/vorta/discussions).
-- Report bugs by opening a new [Github issue](https://github.com/borgbase/vorta/issues/new/choose).
-- Want to contribute to Vorta? Great! See our [contributor guide](https://vorta.borgbase.com/contributing/) on how to help out with coding, translation and packaging.
-- We currently have students from the Google Summer Of Code 2023 Program contributing to this project.
-
-## Development
-
-Vorta uses [uv](https://docs.astral.sh/uv/) for dependency management.
-
-### Quick Try
-
-To quickly try the latest development version without cloning:
+## Development Setup
+This repository uses [uv](https://docs.astral.sh/uv/) for dependency management.
 
 ```bash
-uvx --from git+https://github.com/borgbase/vorta vorta
-```
-
-### Full Setup
-
-For development work, clone the repository:
-
-```bash
-# Install uv (if not already installed)
+# Install uv (if needed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Clone and setup
-git clone https://github.com/borgbase/vorta.git
-cd vorta
+# Clone your fork
+git clone git@github.com:msambinelli/ResticDesk.git
+cd ResticDesk
+
+# Install dependencies
 uv sync
 
-# Run Vorta
+# Run app
 uv run vorta
 
 # Run tests
 uv run pytest
 ```
 
-See the [contributor guide](https://vorta.borgbase.com/contributing/) for more details.
+Notes:
+- You need a working `restic` binary in your `PATH`.
+- GUI tests may require a desktop/Qt-capable environment.
 
-## License and Credits
-- See [CONTRIBUTORS.md](CONTRIBUTORS.md) to see who programmed and translated Vorta.
-- Licensed under [GPLv3](LICENSE.txt). © 2018-2023 Manuel Riel and Vorta contributors
-- Based on [PyQt](https://riverbankcomputing.com/software/pyqt/intro) and [Qt](https://www.qt.io).
-- Icons by [Fork Awesome](https://forkaweso.me/) (licensed under [SIL Open Font License](https://scripts.sil.org/OFL), Version 1.1) and Material Design icons by Google (licensed under [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)). See the `src/vorta/assets/icons` folder for a copy of applicable licenses.
+## Usage Notes
+- Use repository URLs/paths compatible with Restic backends.
+- Retention settings are applied through Restic forget/prune semantics.
+- Mount currently targets full repository mount (not single-snapshot mount).
 
-## Additional Support
-The team's work is also supported by the below services:
+## Roadmap
+Short term:
+- Full UI terminology cleanup (`archive` vs `snapshot`, user-facing strings).
+- Remove/rename remaining internal `Borg*` code identifiers.
+- Refresh translation catalogs and regenerate compiled `.qm` files.
+- Expand Restic-native integration tests.
 
-<a href="https://1password.com/"><img src="https://files.pf7.net/vorta/1Password_wordmark_blue_2023.png" align="left" height="40"></a> <a href="https://termius.com/"><img src="https://files.pf7.net/vorta/termius-logo-362-black.png" align="left" height="40"></a>
+Mid term:
+- Improve snapshot diff UX with a Restic-compatible approach.
+- Improve restore previews and mount navigation UX.
+- Add release packaging for Linux/macOS.
+
+## Contributing
+Contributions are welcome.
+
+Recommended contribution flow:
+- Open an issue describing bug/feature and reproduction steps.
+- Keep PRs focused and small.
+- Include tests or clear manual validation notes.
+
+For code style and tooling, follow project conventions already present in the repository.
+
+## License and Attribution
+- Licensed under [GPLv3](LICENSE.txt).
+- This project is based on the Vorta codebase; see [CONTRIBUTORS.md](CONTRIBUTORS.md) for original and ongoing contributor credits.
+- Original Vorta project: https://github.com/borgbase/vorta
